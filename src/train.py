@@ -13,11 +13,11 @@ warnings.filterwarnings("ignore")
 class Trainer:
     log = Logger()
 
-    def initLogger(self):
+    def initLogger(self, model_name=''):
         ## Writing the loss and results
         if not os.path.exists("./logs/"):
             os.mkdir("./logs/")
-        self.log.open("logs/%s_log_train.txt")
+        self.log.open(f"logs/train_{config.model_name}_E{config.epochs}_B{config.epochs}_LR{config.learning_rate}.txt")
         self.log.write(
             "\n----------------------------------------------- [START %s] %s\n\n"
             % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "-" * 51)
@@ -163,5 +163,10 @@ class Trainer:
                 self.val_loader, self.model, self.criterion, epoch, train_metrics, start
             )
             ## Saving the model
-            filename = "checkpoints/Knife-Effb0-E" + str(epoch + 1) + ".pt"
+            if not os.path.exists("./checkpoints/"):
+                os.mkdir("./checkpoints/")
+            filename = f"checkpoints/{config.model_name}_E{str(epoch + 1)}_B{config.epochs}_LR{config.learning_rate}@1.pt"
+            if os.path.exists(filename):                
+                filename, itr = filename.split('@')
+                filename = filename + f"@{int(itr.split('.')[0])+1}.pt"
             torch.save(self.model.state_dict(), filename)

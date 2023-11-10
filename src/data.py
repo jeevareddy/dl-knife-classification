@@ -50,7 +50,7 @@ class knifeDataset(Dataset):
         row = self.images_df.iloc[index]
         filename = str(row.Id)
         if self.data_dir:
-            filename = os.path.join(self.data_dir, filename)
+            filename = os.path.join(self.data_dir, filename[2:])
         im = cv2.imread(filename)[:,:,::-1]
         return im, filename
 

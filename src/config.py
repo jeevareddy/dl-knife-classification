@@ -5,10 +5,10 @@ class DefaultConfigs(object):
     batch_size = 16 ## batch size
     epochs = 20    ## epochs
     learning_rate=0.00005  ## learning rate
+    model_name = ''
     
     
-    def __init__(self, parsed_args=None, *args, **kwargs):        
-        super(DefaultConfigs, self).__init__(*args, **kwargs)
+    def parseArgs(self, parsed_args=None):
         if parsed_args:
             self.n_classes = parsed_args.num_classes
             self.img_weight = parsed_args.img_width
@@ -16,5 +16,6 @@ class DefaultConfigs(object):
             self.batch_size = parsed_args.batch_size
             self.epochs = parsed_args.epochs
             self.learning_rate = parsed_args.lr
+            self.model_name = parsed_args.model
         
 config = DefaultConfigs()
