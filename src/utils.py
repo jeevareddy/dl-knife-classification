@@ -4,7 +4,7 @@ import json
 import torch
 import shutil
 import numpy as np 
-from config import config
+from src.config import config
 from torch import nn
 import torch.nn.functional as F 
 from sklearn.metrics import f1_score

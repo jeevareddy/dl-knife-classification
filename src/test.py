@@ -50,7 +50,7 @@ def map_accuracy(probs, truth, k=5):
 
 ######################## load file and get splits #############################
 print('reading test file')
-test_files = pd.read_csv("test.csv")
+test_files = pd.read_csv("dataset/test.csv")
 print('Creating test dataloader')
 test_gen = knifeDataset(test_files,mode="val")
 test_loader = DataLoader(test_gen,batch_size=64,shuffle=False,pin_memory=True,num_workers=8)
