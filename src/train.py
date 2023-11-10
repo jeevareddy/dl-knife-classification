@@ -165,7 +165,9 @@ class Trainer:
             ## Saving the model
             if not os.path.exists("./checkpoints/"):
                 os.mkdir("./checkpoints/")
-            filename = f"checkpoints/{config.model_name}_E{str(epoch + 1)}_B{config.epochs}_LR{config.learning_rate}@1.pt"
+            if not os.path.exists(f"./checkpoints/{config.model_name}/"):
+                os.mkdir(f"./checkpoints/{config.model_name}/")
+            filename = f"checkpoints/{config.model_name}/{config.model_name}_E{str(epoch + 1)}_B{config.epochs}_LR{config.learning_rate}@1.pt"
             if os.path.exists(filename):                
                 filename, itr = filename.split('@')
                 filename = filename + f"@{int(itr.split('.')[0])+1}.pt"
