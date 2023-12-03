@@ -1,15 +1,7 @@
 ## import libraries for training
 import warnings
-from datetime import datetime
-from timeit import default_timer as timer
-import pandas as pd
 import torch.optim
-from sklearn.model_selection import train_test_split
-from torch import optim
-from torch.optim import lr_scheduler
-from torch.utils.data import DataLoader
-from src.data import knifeDataset
-import timm
+from sklearn.metrics import classification_report, cohen_kappa_score
 from src.utils import *
 warnings.filterwarnings('ignore')
 
@@ -20,6 +12,9 @@ class Validator:
         model.eval()
         model.training=False
         map = AverageMeter()
+        
+        all_gts = []
+        all_preds = []
         with torch.no_grad():
             for i, (images,target,fnames) in enumerate(val_loader):
                 img = images.cuda(non_blocking=True)
@@ -29,8 +24,13 @@ class Validator:
                     logits = model(img)
                     preds = logits.softmax(1)
                 
+                all_gts.extend(label.cpu())
+                all_preds.extend(preds.cpu().argmax(axis=1))
+                
                 valid_map5, valid_acc1, valid_acc5 = self.map_accuracy(preds, label)
                 map.update(valid_map5,img.size(0))
+        print(classification_report(all_gts, all_preds))
+        print("Cohen's Kappa: ",cohen_kappa_score(all_gts, all_preds))
         return map.avg
 
     ## Computing the mean average precision, accuracy 

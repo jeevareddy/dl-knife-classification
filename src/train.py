@@ -13,11 +13,20 @@ warnings.filterwarnings("ignore")
 class Trainer:
     log = Logger()
 
-    def initLogger(self, model_name=''):
+    def get_dynamic_file_name(self, epoch=config.epochs):
+        return f"{config.model_name}{'' if config.class_weights is None else '_Cw'}{'_Aug' if len(config.dataAugmentations) != 0  else ''}{'_Fl' if config.freezeLayer else ''}_E{epoch}_B{config.batch_size}_LR{config.learning_rate}_WD{config.weight_decay}_{config.optim}_{config.criterion}"
+
+    def initLogger(self):
         ## Writing the loss and results
         if not os.path.exists("./logs/"):
             os.mkdir("./logs/")
-        self.log.open(f"logs/train_{config.model_name}_E{config.epochs}_B{config.epochs}_LR{config.learning_rate}.txt")
+        filename = f"logs/train_{self.get_dynamic_file_name(epoch=config.epochs)}@1.txt"
+        if os.path.exists(filename):
+            filename, itr = filename.split("@")
+            filename = filename + f"@{int(itr.split('.')[0])+1}.txt"
+        self.log.open(filename)
+        self.log.write(f"\nConfig:\n")
+        self.log.write(config.toString())
         self.log.write(
             "\n----------------------------------------------- [START %s] %s\n\n"
             % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "-" * 51)
@@ -132,16 +141,72 @@ class Trainer:
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
-        self.optimizer = optim.Adam(self.model.parameters(), lr=config.learning_rate)
+
+        self.initLogger()
+        self.initOptimizer()
+        self.initCriterion()
+
+        self.scaler = torch.cuda.amp.GradScaler()
         self.scheduler = lr_scheduler.CosineAnnealingLR(
             optimizer=self.optimizer,
             T_max=config.epochs * len(train_loader),
             eta_min=0,
             last_epoch=-1,
         )
-        self.criterion = nn.CrossEntropyLoss().cuda()
-        self.scaler = torch.cuda.amp.GradScaler()
-        self.initLogger()
+
+    def initOptimizer(self):
+        if config.optim == "adam":
+            self.optimizer = optim.Adam(
+                self.model.parameters(),
+                lr=config.learning_rate,
+                weight_decay=config.weight_decay,
+            )
+        if config.optim == "adamw":
+            self.optimizer = optim.AdamW(
+                self.model.parameters(),
+                lr=config.learning_rate,
+                weight_decay=config.weight_decay,
+            )
+        if config.optim == "radam":
+            self.optimizer = optim.RAdam(
+                self.model.parameters(),
+                lr=config.learning_rate,
+                weight_decay=config.weight_decay,
+            )
+        if config.optim == "sgd":
+            self.optimizer = optim.SGD(
+                self.model.parameters(),
+                lr=config.learning_rate,
+                weight_decay=config.weight_decay,
+            )
+        if config.optim == "rmsprop":
+            self.optimizer = optim.RMSprop(
+                self.model.parameters(),
+                lr=config.learning_rate,
+                weight_decay=config.weight_decay,
+            )
+        if config.optim == "adadelta":
+            self.optimizer = optim.Adadelta(
+                self.model.parameters(),
+                lr=config.learning_rate,
+                weight_decay=config.weight_decay,
+            )
+        if config.optim == "adamax":
+            self.optimizer = optim.Adamax(
+                self.model.parameters(),
+                lr=config.learning_rate,
+                weight_decay=config.weight_decay,
+            )
+        if config.optim == "LBFGS":
+            self.optimizer = optim.LBFGS(
+                self.model.parameters(), lr=config.learning_rate
+            )
+
+    def initCriterion(self):
+        if config.criterion == "crossentropy":
+            self.criterion = nn.CrossEntropyLoss(weight= None if config.class_weights is None else  torch.HalfTensor(config.class_weights).cuda() ).cuda()
+        if config.criterion == "mae":
+            self.criterion = nn.L1Loss().cuda()
 
     def train(self):
         ############################# Training #################################
@@ -167,8 +232,8 @@ class Trainer:
                 os.mkdir("./checkpoints/")
             if not os.path.exists(f"./checkpoints/{config.model_name}/"):
                 os.mkdir(f"./checkpoints/{config.model_name}/")
-            filename = f"checkpoints/{config.model_name}/{config.model_name}_E{str(epoch + 1)}_B{config.epochs}_LR{config.learning_rate}@1.pt"
-            if os.path.exists(filename):                
-                filename, itr = filename.split('@')
+            filename = f"checkpoints/{config.model_name}/{self.get_dynamic_file_name(epoch=str(epoch + 1))}@1.pt"
+            if os.path.exists(filename):
+                filename, itr = filename.split("@")
                 filename = filename + f"@{int(itr.split('.')[0])+1}.pt"
             torch.save(self.model.state_dict(), filename)

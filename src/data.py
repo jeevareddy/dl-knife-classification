@@ -1,4 +1,3 @@
-from torchvision.transforms.transforms import ColorJitter, RandomRotation, RandomVerticalFlip
 from src.utils import *
 from src.config import *
 from PIL import Image
@@ -7,12 +6,13 @@ from torchvision import transforms as T
 import torchvision.transforms.functional as F
 import pathlib
 from torchvision.io import read_image
-import numpy as np 
+import numpy as np
 import cv2
+
 
 # create dataset class
 class knifeDataset(Dataset):
-    def __init__(self,images_df,mode="train", data_dir=None):
+    def __init__(self, images_df, mode="train", data_dir=None):
         self.images_df = images_df.copy()
         self.images_df.Id = self.images_df.Id
         self.mode = mode
@@ -21,37 +21,49 @@ class knifeDataset(Dataset):
     def __len__(self):
         return len(self.images_df)
 
-    def __getitem__(self,index):
+    def __getitem__(self, index):
         try:
-            X,fname = self.read_images(index)
+            X, fname = self.read_images(index)
             if not self.mode == "test":
                 labels = self.images_df.iloc[index].Label
             else:
                 y = str(self.images_df.iloc[index].Id.absolute())
             if self.mode == "train":
-                X = T.Compose([T.ToPILImage(),
-                        T.Resize((config.img_weight,config.img_height)),
-                        T.ColorJitter(brightness=0.2,contrast=0,saturation=0,hue=0),
-                        T.RandomRotation(degrees=(0, 180)),
-                        T.RandomVerticalFlip(p=0.5),
-                        T.RandomHorizontalFlip(p=0.5),
+                # Resize
+                X = T.Compose(
+                    [T.ToPILImage(), T.Resize((config.img_weight, config.img_height))]
+                )(X)
+                
+                # Data Augmentations
+                if len(config.dataAugmentations) !=0:
+                    X = T.Compose(config.dataAugmentations)(X)
+                
+                # Normalize
+                X = T.Compose(
+                    [
                         T.ToTensor(),
-                        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])(X)
+                        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                    ]
+                )(X)
             elif self.mode == "val":
-                X = T.Compose([T.ToPILImage(),
-                        T.Resize((config.img_weight,config.img_height)),
+                X = T.Compose(
+                    [
+                        T.ToPILImage(),
+                        T.Resize((config.img_weight, config.img_height)),
                         T.ToTensor(),
-                        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])(X)
-        except:
+                        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                    ]
+                )(X)
+        except Exception as error:
+            print(f"Image Returned None: {self.images_df.iloc[index].Id}")
+            print("An exception occurred:", error)
             return None
-        return X.float(),labels, fname
+        return X.float(), labels, fname
 
-    def read_images(self,index):
+    def read_images(self, index):
         row = self.images_df.iloc[index]
         filename = str(row.Id)
         if self.data_dir:
             filename = os.path.join(self.data_dir, filename[2:])
-        im = cv2.imread(filename)[:,:,::-1]
+        im = cv2.imread(filename)[:, :, ::-1]
         return im, filename
-
-
